@@ -1,0 +1,42 @@
+Lenel OnGuard 2013 SP1 - version 6.6.415.0  -- SQL DB 2008 R2 - 
+
+Time Stamp in DAtabase causing format issues in the flex connector is in the following format ---- Column Name is Event_Time_UTC : Format is 2016-04-11 12:43:24.000 exports into the CSV as 43:24.0
+ which is translated in the CSV field as 4/11/2016  12:43:24 PM however you have to preserve to the millisecond to separate event times.
+
+Vendor Supplied Queries - weaknesses - targeted to specific actions - Access Grants - leaves out all Bypasses, Keyed, entry and overrides.
+Vendor Access Grants - 
+
+ SELECT "EMP"."LASTNAME", "EMP"."FIRSTNAME", "EVENT"."EVDESCR", "EVENTS"."EMPID", "ACCESSPANE"."PANELID", "EVENTS"."EVENTTYPE", "EVENTS"."MACHINE", "EVENTS"."CARDNUM", "EVENTS"."SERIALNUM", "EVENTS"."ISSUECODE", "ACCESSPANE"."PANELTYPE", "READER"."READERDESC", "ACCOUNT_ZONE"."ACCOUNT_ZONEID", "ACCOUNT_ZONE"."NAME", "ACCOUNT_ZONE"."ZONENUM", "EVENTS"."DEVID", "EVENTS"."EVENTID", "EVENTS"."INPUTDEVID", "PANELTYPE"."PANELCLASS", "OPENIT_DEVICE"."NAME", "OPENIT_DEVICE_SUB"."NAME", "ACCESSPANE"."NAME", "EVENTS"."EVENT_TIME_UTC"
+ FROM   ((((((("EVENTS" "EVENTS" INNER JOIN "EVENT" "EVENT" ON ("EVENTS"."EVENTTYPE"="EVENT"."EVTYPEID") AND ("EVENTS"."EVENTID"="EVENT"."EVID")) INNER JOIN "ACCESSPANE" "ACCESSPANE" ON "EVENTS"."MACHINE"="ACCESSPANE"."PANELID") LEFT OUTER JOIN "READER" "READER" ON ("EVENTS"."MACHINE"="READER"."PANELID") AND ("EVENTS"."DEVID"="READER"."READERID")) LEFT OUTER JOIN "EMP" "EMP" ON "EVENTS"."EMPID"="EMP"."ID") LEFT OUTER JOIN "ACCOUNT_ZONE" "ACCOUNT_ZONE" ON ("EVENTS"."MACHINE"="ACCOUNT_ZONE"."PANELID") AND ("EVENTS"."DEVID"="ACCOUNT_ZONE"."ZONENUM")) LEFT OUTER JOIN "OPENIT_DEVICE" "OPENIT_DEVICE_SUB" ON (("EVENTS"."DEVID"="OPENIT_DEVICE_SUB"."OPENIT_DEVICEID") AND ("EVENTS"."MACHINE"="OPENIT_DEVICE_SUB"."PANELID")) AND ("EVENTS"."INPUTDEVID"="OPENIT_DEVICE_SUB"."SUB_DEVICEID")) LEFT OUTER JOIN "OPENIT_DEVICE" "OPENIT_DEVICE" ON ("EVENTS"."DEVID"="OPENIT_DEVICE"."OPENIT_DEVICEID") AND ("EVENTS"."MACHINE"="OPENIT_DEVICE"."PANELID")) INNER JOIN "PANELTYPE" "PANELTYPE" ON "ACCESSPANE"."PANELTYPE"="PANELTYPE"."PANELTYPEID"
+ WHERE  "EVENTS"."EVENTID" <5 AND "EVENTTYPE" =0
+ Order By LASTNAME, EVENT_TIME_UTC;
+
+Vendor Supplied Card Holder Query - weakness --- Does not show Badges per user, and Vistor Badges does not include Vendor tracking in 3rd party solution.
+Vendor Badge Holders - 
+
+ SELECT "EMP"."LASTNAME", "EMP"."FIRSTNAME", "EMP"."MIDNAME", "EMP"."ID", "BADGE"."ID", "BADGE"."ISSUECODE", "BADGSTAT"."NAME", "BADGETYP"."NAME", "BADGE"."ACTIVATE", "BADGE"."DEACTIVATE", "BADGE"."STATUS", "EMP"."VISITOR", "BADGE"."BADGEKEY"
+ FROM   (("EMP" "EMP" INNER JOIN "BADGE" "BADGE" ON "EMP"."ID"="BADGE"."EMPID") INNER JOIN "BADGSTAT" "BADGSTAT" ON "BADGE"."STATUS"="BADGSTAT"."ID") INNER JOIN "BADGETYP" "BADGETYP" ON "BADGE"."TYPE"="BADGETYP"."ID"
+ WHERE  "EMP"."ID"<>0
+ ORDER BY "EMP"."LASTNAME", "EMP"."FIRSTNAME", "EMP"."MIDNAME", "EMP"."ID", "BADGE"."ID", "BADGE"."ISSUECODE"
+
+
+Activate User Group Query - All Access Grants across the System Tying Badge to Employee to Alarm Panel to Door to Door Action over time.
+
+Select p.EMPID , p.EVENT_TIME_UTC, p.DEVID,s.ID , t.EVDESCR , f.NAME, g.READERDESC, e.LASTNAME, e.FIRSTNAME
+From EVENTS p
+INNER JOIN BADGE s  ON s.empid = p.EMPID
+INNER JOIN EVENT t ON t.EVENTID = p.EVENTID
+INNER JOIN ACCESSPANE f ON f.PANELID = p.DEVID
+INNER JOIN READER g ON g.PANELID = p.DEVID
+INNER JOIN EMP e ON s.ID = e.ID
+WHERE p.EVENT_TIME_UTC > DATEADD(day, -1, GETDATE())
+
+Activate User Group Query ---- Every Issued Badge to Employee ID (user login) all badge types with Deactivation date - contractor, visitor, vendor, employee
+
+select b.ID, b.EMPID, b.DEACTIVATE, e.LASTNAME, e.FIRSTNAME from BADGE b, (
+	select ID, LASTNAME, FIRSTNAME from EMP) as e
+where b.ID=e.ID
+
+
+Activate User Group Query --- All Application Adminsitrators Activity over time --- query pending working on empty columns in the Joins.
+
